@@ -61,7 +61,7 @@ class TedDataset(Dataset):
 
         return src_seqs, trg_seqs
         
-def main():
+def test():
     en_tokenizer = WordpieceTokenizer('en').load_model()
     de_tokenizer = WordpieceTokenizer('de').load_model()
     
@@ -79,4 +79,4 @@ def main():
         print(outputs)
         break
 if __name__ == "__main__":
-    main()
+    test()

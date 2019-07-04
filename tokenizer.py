@@ -23,7 +23,7 @@ class WordpieceTokenizer(object):
         print("load_model {}".format(file))
         return self
 
-def main():
+def test():
     """
     Generate tokenizer
     """
@@ -36,4 +36,4 @@ def main():
     # en_tokenizer.transform(["But it does not need to have to be that way.","Wernher von Braun, in the aftermath of World War II concluded, quote: science and religion are not antagonists."])
     
 if __name__ == "__main__":
-    main()
+    test()
