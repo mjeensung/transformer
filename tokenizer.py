@@ -1,4 +1,7 @@
 import sentencepiece as spm
+import logging
+
+LOGGER = logging.getLogger()
 
 class WordpieceTokenizer(object):
     def __init__(self,prefix):
@@ -8,7 +11,7 @@ class WordpieceTokenizer(object):
         
     def transform(self,sentence):
         x = self.sp.EncodeAsPieces(sentence)
-        print(x)
+        LOGGER.info(x)
         x = self.sp.EncodeAsIds(sentence)
         return x
     

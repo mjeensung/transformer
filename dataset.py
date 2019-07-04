@@ -3,6 +3,9 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from tokenizer import WordpieceTokenizer
 
+import logging
+LOGGER = logging.getLogger()
+
 class TedDataset(Dataset):
     def __init__(self,en_tokenizer,de_tokenizer):
         with open('./dataset/de-en/train.en',encoding='utf-8') as f:
@@ -60,8 +63,17 @@ class TedDataset(Dataset):
         trg_seqs, trg_lengths = merge(trg_seqs)
 
         return src_seqs, trg_seqs
-        
+
+def init_logging():
+    LOGGER.setLevel(logging.INFO)
+    fmt = logging.Formatter('%(asctime)s: [ %(message)s ]',
+                            '%m/%d/%Y %I:%M:%S %p')
+    console = logging.StreamHandler()
+    console.setFormatter(fmt)
+    LOGGER.addHandler(console)
+            
 def test():
+    init_logging()
     en_tokenizer = WordpieceTokenizer('en').load_model()
     de_tokenizer = WordpieceTokenizer('de').load_model()
     
@@ -73,10 +85,10 @@ def test():
                               collate_fn=dataset.collate_fn)
     for i, data in enumerate(train_loader):
         inputs, outputs = data
-        print("inputs.size()=",inputs.size())
-        print(inputs)
-        print("outputs.size()=",outputs.size())
-        print(outputs)
+        LOGGER.info("inputs.size()=".format(inputs.size()))
+        LOGGER.info(inputs)
+        LOGGER.info("outputs.size()=".format(outputs.size()))
+        LOGGER.info(outputs)
         break
 if __name__ == "__main__":
     test()
