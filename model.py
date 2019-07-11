@@ -52,25 +52,25 @@ class Self_Attention(nn.Module):
         """
         # 1. batch matrix multiplication of Q and K
         x = torch.bmm(Q,K.transpose(1,2))
-        # LOGGER.info("after matmul\n{}".format(x))
+        LOGGER.info("after matmul\n{}".format(x))
         
         # 2. scale
         x = x/math.sqrt(self.d_k)
-        # LOGGER.info("after scale\n{}".format(x)) 
+        LOGGER.info("after scale\n{}".format(x)) 
 
         # 3. mask (option)
         if self.is_mask:
             seq_len = Q.size()[-2]
             x = self.mask(x,seq_len)
-            # LOGGER.info("after masking\n{}".format(x))
+            LOGGER.info("after masking\n{}".format(x))
 
         # 4. softmax
         x = F.softmax(x,dim=1)
-        # LOGGER.info("after softmax\n{}".format(x)) 
+        LOGGER.info("after softmax\n{}".format(x)) 
 
         # 5. batch matrix multiplication with V
         x = torch.bmm(x,V)
-        # LOGGER.info("after matmul\n{}".format(x))
+        LOGGER.info("after matmul\n{}".format(x))
 
         return x
 
@@ -222,10 +222,11 @@ class TransformerModel(nn.Module):
         
 def test():
     init_logging()
-    inputs = torch.LongTensor([[1,2,3,4],[3,2,5,1]])    
+    inputs = torch.LongTensor([[1,2,3,4]])   
+    outputs = torch.LongTensor([[1,2,3,4]])    
 
     model = TransformerModel(d_model=512, num_heads=8, seq_len=4, in_vocab_size=20, out_vocab_size=20)
-    output_probabilities = model(inputs,inputs)
+    output_probabilities = model(inputs,outputs)
     
 if __name__ == "__main__":
     test()
