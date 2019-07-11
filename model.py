@@ -184,25 +184,28 @@ class TransformerModel(nn.Module):
     def __init__(self, d_model= 512, 
                         num_heads=8,
                         seq_len = 20,
-                        vocab_size=32000):
+                        in_vocab_size=32000,
+                        out_vocab_size=32000):
         super(TransformerModel,self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.seq_len = seq_len
-        self.vocab_size = vocab_size
+        self.in_vocab_size = in_vocab_size
+        self.out_vocab_size = out_vocab_size
 
-        self.word_embed = WordEmbedding(vocab_size=self.vocab_size)
+        self.in_word_embed = WordEmbedding(vocab_size=self.in_vocab_size)
+        self.out_word_embed = WordEmbedding(vocab_size=self.out_vocab_size)
         self.encoder = Encoder(self.seq_len, self.d_model ,self.num_heads)
         self.decoder = Decoder(self.seq_len, self.d_model ,self.num_heads)
 
-        self.linear = nn.Linear(self.d_model,self.vocab_size)
+        self.linear = nn.Linear(self.d_model,self.out_vocab_size)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self,input,output):
-        input = self.word_embed(input)
+        input = self.in_word_embed(input)
         LOGGER.info("input size={}".format(input.size()))
 
-        output = self.word_embed(output)
+        output = self.out_word_embed(output)
         LOGGER.info("output size={}".format(output.size()))
 
         encoded_input = self.encoder(input)
@@ -221,7 +224,7 @@ def test():
     init_logging()
     inputs = torch.LongTensor([[1,2,3,4],[3,2,5,1]])    
 
-    model = TransformerModel(d_model=512, num_heads=8, seq_len=4, vocab_size=20)
+    model = TransformerModel(d_model=512, num_heads=8, seq_len=4, in_vocab_size=20, out_vocab_size=20)
     output_probabilities = model(inputs,inputs)
     
 if __name__ == "__main__":
