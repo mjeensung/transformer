@@ -131,8 +131,6 @@ class Decoder(nn.Module):
         self.norm = nn.LayerNorm((seq_len,d_model))
 
     def forward(self,input, output):
-        
-
         # 1. Masked multi head attention 
         x = Q = K = V = input
         x = self.norm (x + self.masked_self_attention(Q,K,V))
