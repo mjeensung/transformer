@@ -52,25 +52,25 @@ class Self_Attention(nn.Module):
         """
         # 1. batch matrix multiplication of Q and K
         x = torch.bmm(Q,K.transpose(1,2))
-        LOGGER.info("after matmul\n{}".format(x))
+        # LOGGER.info("after matmul\n{}".format(x))
         
         # 2. scale
         x = x/math.sqrt(self.d_k)
-        LOGGER.info("after scale\n{}".format(x)) 
+        # LOGGER.info("after scale\n{}".format(x)) 
 
         # 3. mask (option)
         if self.is_mask:
             seq_len = Q.size()[-2]
             x = self.mask(x,seq_len)
-            LOGGER.info("after masking\n{}".format(x))
+            # LOGGER.info("after masking\n{}".format(x))
 
         # 4. softmax
         x = F.softmax(x,dim=1)
-        LOGGER.info("after softmax\n{}".format(x)) 
+        # LOGGER.info("after softmax\n{}".format(x)) 
 
         # 5. batch matrix multiplication with V
         x = torch.bmm(x,V)
-        LOGGER.info("after matmul\n{}".format(x))
+        # LOGGER.info("after matmul\n{}".format(x))
 
         return x
 
@@ -132,12 +132,12 @@ class Decoder(nn.Module):
 
     def forward(self,input, output):
         # 1. Masked multi head attention 
-        x = Q = K = V = input
+        x = Q = K = V = output
         x = self.norm (x + self.masked_self_attention(Q,K,V))
         
         # 2. Multi head attention
-        Q = output
-        K = V = x
+        Q = x
+        K = V = input
         x = self.norm (x + self.self_attention(Q,K,V))
 
         # 3. Feed Forward
@@ -183,6 +183,8 @@ class WordEmbedding(nn.Module):
 class TransformerModel(nn.Module):
     def __init__(self, d_model= 512, 
                         num_heads=8,
+                        num_encoders=6,
+                        num_decoders=6,
                         seq_len = 20,
                         in_vocab_size=32000,
                         out_vocab_size=32000):
@@ -190,6 +192,8 @@ class TransformerModel(nn.Module):
         self.d_model = d_model
         self.num_heads = num_heads
         self.seq_len = seq_len
+        self.num_encoders = num_encoders
+        self.num_decoders = num_decoders
         self.in_vocab_size = in_vocab_size
         self.out_vocab_size = out_vocab_size
 
@@ -208,10 +212,14 @@ class TransformerModel(nn.Module):
         output = self.out_word_embed(output)
         LOGGER.info("output size={}".format(output.size()))
 
-        encoded_input = self.encoder(input)
+        encoded_input = input
+        for i in range(self.num_encoders):
+            encoded_input = self.encoder(encoded_input)
         LOGGER.info("encoded_input size={}".format(encoded_input.size()))
 
-        decoded_output = self.decoder(encoded_input, output)
+        decoded_output = output
+        for i in range(self.num_decoders):
+            decoded_output = self.decoder(encoded_input, decoded_output)
         LOGGER.info("decoded_output size={}".format(decoded_output.size()))
 
         x = self.linear(decoded_output)
@@ -225,8 +233,8 @@ def test():
     inputs = torch.LongTensor([[1,2,3,4]])   
     outputs = torch.LongTensor([[1,2,3,4]])    
 
-    model = TransformerModel(d_model=512, num_heads=8, seq_len=4, in_vocab_size=20, out_vocab_size=20)
+    model = TransformerModel(d_model=512, num_heads=8, num_encoders=6, num_decoders=6,seq_len=4, in_vocab_size=20, out_vocab_size=20)
     output_probabilities = model(inputs,outputs)
-    
+
 if __name__ == "__main__":
     test()
