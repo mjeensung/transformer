@@ -26,6 +26,9 @@ class WordpieceTokenizer(object):
         print("load_model {}".format(file))
         return self
 
+    def __len__(self):
+        return self.vocab_size
+
 def test():
     """
     Generate tokenizer

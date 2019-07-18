@@ -7,7 +7,7 @@ import logging
 LOGGER = logging.getLogger()
 
 class TedDataset(Dataset):
-    def __init__(self,en_tokenizer,de_tokenizer):
+    def __init__(self,en_tokenizer,de_tokenizer,max_seq_len):
         with open('./dataset/de-en/train.en',encoding='utf-8') as f:
             en = f.readlines()
         with open('./dataset/de-en/train.de',encoding='utf-8') as f:
@@ -18,6 +18,7 @@ class TedDataset(Dataset):
         self.de_data = de
         self.en_tokenizer = en_tokenizer
         self.de_tokenizer = de_tokenizer
+        self.max_seq_len = max_seq_len
     
     def __getitem__(self,index):
         en_data = self.en_data[index]
@@ -45,12 +46,12 @@ class TedDataset(Dataset):
             trg_lengths: list of length (batch_size); valid length for each padded target sequence.
         """
         def merge(sequences):
-            lengths = [len(seq) for seq in sequences]
-            padded_seqs = torch.zeros(len(sequences), max(lengths)).long()
+            padded_seqs = torch.zeros(len(sequences),self.max_seq_len).long()
+            # print("padded_seqs.size()=",padded_seqs.size())
             for i, seq in enumerate(sequences):
-                end = lengths[i]
-                padded_seqs[i, :end] = seq[:end]
-            return padded_seqs, lengths
+                # print("min(self.max_seq_len,len(seq))=",min(self.max_seq_len,len(seq)))
+                padded_seqs[i][:min(self.max_seq_len,len(seq))] = seq[:min(self.max_seq_len,len(seq))]
+            return padded_seqs
 
         # sort a list by sequence length (descending order) to use pack_padded_sequence
         data.sort(key=lambda x: len(x[0]), reverse=True)
@@ -59,8 +60,8 @@ class TedDataset(Dataset):
         src_seqs, trg_seqs = zip(*data)
 
         # merge sequences (from tuple of 1D tensor to 2D tensor)
-        src_seqs, src_lengths = merge(src_seqs)
-        trg_seqs, trg_lengths = merge(trg_seqs)
+        src_seqs = merge(src_seqs)
+        trg_seqs = merge(trg_seqs)
 
         return src_seqs, trg_seqs
 
@@ -78,15 +79,17 @@ def test():
     de_tokenizer = WordpieceTokenizer('de').load_model()
     
     # en_tokenizer.load_model()
-    dataset = TedDataset(en_tokenizer=en_tokenizer, de_tokenizer=de_tokenizer)
+    dataset = TedDataset(en_tokenizer=en_tokenizer, de_tokenizer=de_tokenizer, max_seq_len=50)
     train_loader = DataLoader(dataset=dataset,
                               batch_size=3,
                               shuffle=False,
                               collate_fn=dataset.collate_fn)
     for i, data in enumerate(train_loader):
         inputs, outputs = data
+        print("inputs.size()=",outputs.size())
         LOGGER.info("inputs.size()=".format(inputs.size()))
         LOGGER.info(inputs)
+        print("outputs.size()=",outputs.size())
         LOGGER.info("outputs.size()=".format(outputs.size()))
         LOGGER.info(outputs)
         break
