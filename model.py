@@ -85,7 +85,7 @@ class Self_Attention(nn.Module):
         return x
 
     def mask(self,input, seq_len):
-        masked_input = torch.full((seq_len,seq_len),fill_value=-float("inf"),requires_grad=True)
+        masked_input = torch.triu(torch.ones(seq_len,seq_len),diagonal=1)*(-1.0e9)
         if torch.cuda.is_available():
             masked_input = masked_input.cuda()
         masked_input = masked_input + input
