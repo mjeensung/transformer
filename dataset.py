@@ -2,7 +2,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
 from tokenizer import WordpieceTokenizer
-
 import logging
 LOGGER = logging.getLogger()
 
@@ -46,7 +45,9 @@ class TedDataset(Dataset):
             trg_lengths: list of length (batch_size); valid length for each padded target sequence.
         """
         def merge(sequences):
-            padded_seqs = torch.zeros(len(sequences),self.max_seq_len).long()
+            padded_seqs = torch.zeros(len(sequences),self.max_seq_len, requires_grad=True).long()
+            if torch.cuda.is_available():
+                padded_seqs = padded_seqs.cuda()
             # print("padded_seqs.size()=",padded_seqs.size())
             for i, seq in enumerate(sequences):
                 # print("min(self.max_seq_len,len(seq))=",min(self.max_seq_len,len(seq)))

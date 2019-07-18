@@ -85,11 +85,9 @@ class Self_Attention(nn.Module):
         return x
 
     def mask(self,input, seq_len):
-        masked_input = torch.zeros((seq_len,seq_len))
-        for i, row in enumerate(masked_input):
-            for j, column in enumerate(row):
-                if i < j:
-                    masked_input[i][j] = -float("inf")
+        masked_input = torch.full((seq_len,seq_len),fill_value=-float("inf"),requires_grad=True)
+        if torch.cuda.is_available():
+            masked_input = masked_input.cuda()
         masked_input = masked_input + input
         return masked_input
 
@@ -105,14 +103,15 @@ class Encoder(nn.Module):
             nn.Linear(2048, self.d_model)
         )
         self.norm = nn.LayerNorm((seq_len,d_model))
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self,input):
         # 1. Multi head attention
         x = Q = K = V = input
-        x = self.norm (x + self.self_attention(Q,K,V))
+        x = self.norm (x + self.dropout(self.self_attention(Q,K,V)))
 
         # 2. Feed Forward
-        x = self.norm (x + self.ffnn(x))
+        x = self.norm (x + self.dropout(self.ffnn(x)))
 
         return x
 
@@ -129,19 +128,20 @@ class Decoder(nn.Module):
             nn.Linear(2048, self.d_model)
         )
         self.norm = nn.LayerNorm((seq_len,d_model))
+        self.dropout = nn.Dropout(0.1)
 
     def forward(self,input, output):
         # 1. Masked multi head attention 
         x = Q = K = V = output
-        x = self.norm (x + self.masked_self_attention(Q,K,V))
+        x = self.norm (x + self.dropout(self.masked_self_attention(Q,K,V)))
         
         # 2. Multi head attention
         Q = x
         K = V = input
-        x = self.norm (x + self.self_attention(Q,K,V))
+        x = self.norm (x + self.dropout(self.self_attention(Q,K,V)))
 
         # 3. Feed Forward
-        x = self.norm (x + self.ffnn(x))
+        x = self.norm (x + self.dropout(self.ffnn(x)))
 
         return x
 
@@ -178,6 +178,8 @@ class WordEmbedding(nn.Module):
         pos_encoding[:,1::2] = np.cos(angles[:, 1::2])
         
         pos_encoding = torch.FloatTensor(pos_encoding)
+        if torch.cuda.is_available():
+            pos_encoding = pos_encoding.cuda()
         return pos_encoding
 
 class TransformerModel(nn.Module):
