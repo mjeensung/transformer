@@ -201,27 +201,31 @@ class TransformerModel(nn.Module):
 
         self.in_word_embed = WordEmbedding(vocab_size=self.in_vocab_size)
         self.out_word_embed = WordEmbedding(vocab_size=self.out_vocab_size)
-        self.encoder = Encoder(self.seq_len, self.d_model ,self.num_heads)
-        self.decoder = Decoder(self.seq_len, self.d_model ,self.num_heads)
+        self.encoders = nn.ModuleList([Encoder(self.seq_len, self.d_model ,self.num_heads) for i in range(self.num_encoders)])
+        self.decoders = nn.ModuleList([Decoder(self.seq_len, self.d_model ,self.num_heads) for i in range(self.num_decoders)])
 
+        self.dropout = nn.Dropout(0.1)
         self.linear = nn.Linear(self.d_model,self.out_vocab_size)
-        self.softmax = nn.Softmax(dim=-1)
+        # self.softmax = nn.Softmax(dim=-1)
+        self.softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self,input,output):
         input = self.in_word_embed(input)
+        input = self.dropout(input)
         LOGGER.info("input size={}".format(input.size()))
 
         output = self.out_word_embed(output)
+        output = self.dropout(output)
         LOGGER.info("output size={}".format(output.size()))
 
         encoded_input = input
-        for i in range(self.num_encoders):
-            encoded_input = self.encoder(encoded_input)
+        for encoder in self.encoders:
+            encoded_input = encoder(encoded_input)
         LOGGER.info("encoded_input size={}".format(encoded_input.size()))
 
         decoded_output = output
-        for i in range(self.num_decoders):
-            decoded_output = self.decoder(encoded_input, decoded_output)
+        for decoder in self.decoders:
+            decoded_output = decoder(encoded_input, decoded_output)
         LOGGER.info("decoded_output size={}".format(decoded_output.size()))
 
         x = self.linear(decoded_output)

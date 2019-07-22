@@ -6,25 +6,23 @@ import logging
 LOGGER = logging.getLogger()
 
 class TedDataset(Dataset):
-    def __init__(self,en_tokenizer,de_tokenizer,max_seq_len):
-        with open('./dataset/de-en/train.en',encoding='utf-8') as f:
-            en = f.readlines()
+    def __init__(self,input_tokenizer,output_tokenizer,max_seq_len):
         with open('./dataset/de-en/train.de',encoding='utf-8') as f:
             de = f.readlines()
+        with open('./dataset/de-en/train.en',encoding='utf-8') as f:
+            en = f.readlines()
         assert(len(en)==len(de))
         self.len = len(en)
-        self.en_data = en
-        self.de_data = de
-        self.en_tokenizer = en_tokenizer
-        self.de_tokenizer = de_tokenizer
+        self.input = de
+        self.output = en
+        self.input_tokenizer = input_tokenizer
+        self.output_tokenizer = output_tokenizer
         self.max_seq_len = max_seq_len
     
     def __getitem__(self,index):
-        en_data = self.en_data[index]
-        de_data = self.de_data[index]
-        # print(en_data)
-        # print(de_data)
-        return torch.tensor(self.en_tokenizer.transform(en_data)), torch.tensor(self.de_tokenizer.transform(de_data))
+        input = self.input[index]
+        output = self.output[index]
+        return torch.tensor(self.input_tokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.output_tokenizer.transform(output), dtype=torch.float64, requires_grad=True)
     
     def __len__(self):
         return self.len
@@ -45,6 +43,7 @@ class TedDataset(Dataset):
             trg_lengths: list of length (batch_size); valid length for each padded target sequence.
         """
         def merge(sequences):
+            # padded_seqs = torch.zeros(len(sequences),self.max_seq_len, requires_grad=True).long()
             padded_seqs = torch.zeros(len(sequences),self.max_seq_len, requires_grad=True).long()
             if torch.cuda.is_available():
                 padded_seqs = padded_seqs.cuda()
