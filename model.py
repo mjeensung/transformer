@@ -105,7 +105,8 @@ class Encoder(nn.Module):
             nn.ReLU(),
             nn.Linear(2048, self.d_model)
         )
-        self.norm = nn.LayerNorm((seq_len,d_model))
+        # self.norm = nn.LayerNorm((seq_len,d_model))
+        self.norm = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(0.1)
 
     def forward(self,input):
@@ -131,7 +132,8 @@ class Decoder(nn.Module):
             nn.ReLU(),
             nn.Linear(2048, self.d_model)
         )
-        self.norm = nn.LayerNorm((seq_len,d_model))
+        # self.norm = nn.LayerNorm((seq_len,d_model))
+        self.norm = nn.LayerNorm(d_model)
         self.dropout = nn.Dropout(0.1)
 
     def forward(self,input, output):
@@ -191,14 +193,14 @@ class TransformerModel(nn.Module):
                         num_heads=8,
                         num_encoders=6,
                         num_decoders=6,
-                        seq_len = 20,
+                        # seq_len = 20,
                         in_vocab_size=32000,
                         out_vocab_size=32000):
         super(TransformerModel,self).__init__()
         # print("TransformerModel d_model={}, num_heads={}, num_encoders={}, seq_len={}".format(d_model,num_heads,num_encoders,seq_len))
         self.d_model = d_model
         self.num_heads = num_heads
-        self.seq_len = seq_len
+        # self.seq_len = seq_len
         self.num_encoders = num_encoders
         self.num_decoders = num_decoders
         self.in_vocab_size = in_vocab_size
@@ -206,8 +208,10 @@ class TransformerModel(nn.Module):
 
         self.in_word_embed = WordEmbedding(vocab_size=self.in_vocab_size)
         self.out_word_embed = WordEmbedding(vocab_size=self.out_vocab_size)
-        self.encoders = nn.ModuleList([Encoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
-        self.decoders = nn.ModuleList([Decoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
+        # self.encoders = nn.ModuleList([Encoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
+        # self.decoders = nn.ModuleList([Decoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
+        self.encoders = nn.ModuleList([Encoder(d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
+        self.decoders = nn.ModuleList([Decoder(d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
 
         self.dropout = nn.Dropout(0.1)
         self.linear = nn.Linear(self.d_model,self.out_vocab_size)
@@ -270,8 +274,9 @@ def test():
     inputs = torch.LongTensor([[1,2,3,4]]).cuda()   
     outputs = torch.LongTensor([[1,2,3,4]]).cuda()    
 
-    model = TransformerModel(d_model=512, num_heads=1, num_encoders=1, num_decoders=1,seq_len=4, in_vocab_size=20, out_vocab_size=20).to(device)
+    model = TransformerModel(d_model=512, num_heads=1, num_encoders=1, num_decoders=1, in_vocab_size=20, out_vocab_size=20).to(device)
     output_probabilities = model(inputs,outputs)
+    print(output_probabilities.size())
 
 if __name__ == "__main__":
     test()
