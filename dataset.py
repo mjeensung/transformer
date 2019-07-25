@@ -22,7 +22,7 @@ class TedDataset(Dataset):
     def __getitem__(self,index):
         input = self.input[index]
         output = self.output[index]
-        return torch.tensor(self.input_tokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.output_tokenizer.transform(output), dtype=torch.float64, requires_grad=True)
+        return torch.tensor(self.input_tokenizer.transform(input,type="input"), dtype=torch.float64, requires_grad=True), torch.tensor(self.output_tokenizer.transform(output,type="output"), dtype=torch.float64, requires_grad=True)
     
     def __len__(self):
         return self.len

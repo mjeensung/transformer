@@ -25,8 +25,8 @@ parser.add_argument('--batch',
 args = parser.parse_args()
                     
 # Load tokenizer
-de_tokenizer = WordpieceTokenizer('de').load_model()
-en_tokenizer = WordpieceTokenizer('en').load_model()
+de_tokenizer = WordpieceTokenizer('de',max_seq_len=50).load_model()
+en_tokenizer = WordpieceTokenizer('en',max_seq_len=50).load_model()
     
 # Load dataset
 dataset = TedDataset(input_tokenizer=de_tokenizer,output_tokenizer=en_tokenizer,max_seq_len=args.max_seq_len)
@@ -51,10 +51,8 @@ model = TransformerModel(d_model=512,
                         seq_len=args.max_seq_len, 
                         in_vocab_size=len(de_tokenizer), 
                         out_vocab_size=len(en_tokenizer)).to(device)
-print("model=",model)
 criterion = nn.NLLLoss(ignore_index=0,reduction='sum')
 optimizer = optim.Adam(model.parameters(), lr=args.learning_rate,betas=(0.9, 0.98), eps=1e-09)
-# optimizer = optim.Adam(params, lr=self.learning_rate)
 
 for epoch in range(args.epoch):
     train_loss = 0
@@ -65,17 +63,18 @@ for epoch in range(args.epoch):
     model.train()
     for i, data in tqdm(enumerate(train_loader),total=len(train_loader)):
         inputs, outputs = data
-        output_probabilities = model(inputs,outputs)
+        output_probabilities = model(inputs,torch.cat((outputs[1:],outputs[0:1]))) # shift right output
         loss = criterion(output_probabilities.view(-1,len(en_tokenizer)), outputs.view(-1))
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        train_loss += loss.item()
+        train_loss += loss.item()*len(outputs)
         train_total += len(outputs)
+        # if i % 10 == 0:
+        #     print("train!outputs=",outputs.tolist())
+        #     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist())
         # break
     train_loss /= train_total
-    # print("train!outputs=",en_tokenizer.decode(outputs.tolist()))
-    # print("train!predict=",en_tokenizer.decode(torch.argmax(output_probabilities,dim=-1).tolist()))
     print("train!outputs=",outputs.tolist())
     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist())
     # val
@@ -85,7 +84,7 @@ for epoch in range(args.epoch):
             inputs, outputs = data
             output_probabilities = model(inputs,outputs)
             loss = criterion(output_probabilities.view(-1,len(en_tokenizer)), outputs.view(-1))
-            val_loss += loss.item()
+            val_loss += loss.item()*len(outputs)
             val_total += len(outputs)
             # break
         val_loss /= val_total

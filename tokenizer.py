@@ -4,15 +4,27 @@ import logging
 LOGGER = logging.getLogger()
 
 class WordpieceTokenizer(object):
-    def __init__(self,prefix):
+    def __init__(self,prefix,max_seq_len=50):
         self.templates = '--input={} --model_prefix={} --vocab_size={} --bos_id=2 --eos_id=3 --pad_id=0 --unk_id=1'
         self.vocab_size = 5000
         self.prefix = "./dataset/"+prefix
+        self.max_seq_len = max_seq_len
         
-    def transform(self,sentence):
+    def transform(self,sentence, type='input'):
+        if type=='input':
+            self.sp.SetEncodeExtraOptions('eos')
+        elif type=='output':
+            self.sp.SetEncodeExtraOptions('bos:eos')
         x = self.sp.EncodeAsPieces(sentence)
-        LOGGER.info(x)
+        # LOGGER.info(x)
         x = self.sp.EncodeAsIds(sentence)
+
+        # padding
+        if len(x) < self.max_seq_len:
+            padded_x = [0]*self.max_seq_len
+            padded_x[:len(x)] = x
+            x = padded_x
+        
         return x
     
     def fit(self,input_file):
@@ -23,7 +35,7 @@ class WordpieceTokenizer(object):
         file = self.prefix+".model"
         self.sp = spm.SentencePieceProcessor()
         self.sp.Load(self.prefix+".model")
-        self.sp.SetEncodeExtraOptions('eos')
+        self.sp.SetEncodeExtraOptions('bos:eos')
         print("load_model {}".format(file))
         return self
 

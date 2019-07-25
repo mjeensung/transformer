@@ -65,7 +65,8 @@ class Self_Attention(nn.Module):
             # LOGGER.info("after masking\n{}".format(x))
 
         # 4. softmax
-        x = F.softmax(x,dim=1)
+        x = F.softmax(x,dim=-1)
+        # x = F.softmax(x,dim=1)
         # LOGGER.info("after softmax\n{}".format(x)) 
 
         # 5. batch matrix multiplication with V
@@ -78,6 +79,7 @@ class Self_Attention(nn.Module):
         """
         multi head attention
         """
+        # print("multi_head_attention num_heads={}".format(self.num_heads))
         output = []
         for head in range(self.num_heads):
             output.append(self.single_attention(Q,K,V))
@@ -94,8 +96,9 @@ class Self_Attention(nn.Module):
 class Encoder(nn.Module):
     def __init__(self, seq_len = 4, d_model = 512, num_heads = 8):
         super(Encoder, self).__init__()
+        # LOGGER.info("Encoder d_model={}, num_heads={}, seq_len={}".format(d_model,num_heads,seq_len))
         self.d_model = d_model
-        self.num_heads = 8
+        self.num_heads = num_heads
         self.self_attention = Self_Attention(self.d_model, self.num_heads)
         self.ffnn = nn.Sequential(
             nn.Linear(self.d_model,2048),
@@ -118,8 +121,9 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, seq_len = 4, d_model = 512, num_heads = 8):
         super(Decoder, self).__init__()
+        # LOGGER.info("Decoder d_model={}, num_heads={}, seq_len={}".format(d_model,num_heads,seq_len))
         self.d_model = d_model
-        self.num_heads = 8
+        self.num_heads = num_heads
         self.self_attention = Self_Attention(self.d_model,self.num_heads, is_mask=False)
         self.masked_self_attention = Self_Attention(self.d_model, self.num_heads, is_mask=True)
         self.ffnn = nn.Sequential(
@@ -191,6 +195,7 @@ class TransformerModel(nn.Module):
                         in_vocab_size=32000,
                         out_vocab_size=32000):
         super(TransformerModel,self).__init__()
+        # print("TransformerModel d_model={}, num_heads={}, num_encoders={}, seq_len={}".format(d_model,num_heads,num_encoders,seq_len))
         self.d_model = d_model
         self.num_heads = num_heads
         self.seq_len = seq_len
@@ -201,45 +206,71 @@ class TransformerModel(nn.Module):
 
         self.in_word_embed = WordEmbedding(vocab_size=self.in_vocab_size)
         self.out_word_embed = WordEmbedding(vocab_size=self.out_vocab_size)
-        self.encoders = nn.ModuleList([Encoder(self.seq_len, self.d_model ,self.num_heads) for i in range(self.num_encoders)])
-        self.decoders = nn.ModuleList([Decoder(self.seq_len, self.d_model ,self.num_heads) for i in range(self.num_decoders)])
+        self.encoders = nn.ModuleList([Encoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
+        self.decoders = nn.ModuleList([Decoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
 
         self.dropout = nn.Dropout(0.1)
         self.linear = nn.Linear(self.d_model,self.out_vocab_size)
-        # self.softmax = nn.Softmax(dim=-1)
         self.softmax = nn.LogSoftmax(dim=-1)
 
     def forward(self,input,output):
+        encoded_input = self.encode(input)
+        decoded_output = self.decode(encoded_input,output)
+        output_probabilities = self.prob(decoded_output)
+        
+        return output_probabilities
+
+    def encode(self,input):
         input = self.in_word_embed(input)
         input = self.dropout(input)
-        LOGGER.info("input size={}".format(input.size()))
-
-        output = self.out_word_embed(output)
-        output = self.dropout(output)
-        LOGGER.info("output size={}".format(output.size()))
+        # LOGGER.info("input size={}".format(input.size()))
 
         encoded_input = input
         for encoder in self.encoders:
             encoded_input = encoder(encoded_input)
-        LOGGER.info("encoded_input size={}".format(encoded_input.size()))
+        # LOGGER.info("encoded_input size={}".format(encoded_input.size()))
+        return encoded_input
+
+    def decode(self,encoded_input,output):
+        output = self.out_word_embed(output)
+        output = self.dropout(output)
+        # LOGGER.info("output size={}".format(output.size()))
 
         decoded_output = output
         for decoder in self.decoders:
             decoded_output = decoder(encoded_input, decoded_output)
-        LOGGER.info("decoded_output size={}".format(decoded_output.size()))
+        # LOGGER.info("decoded_output size={}".format(decoded_output.size()))
 
+        return decoded_output
+    
+    def prob(self,decoded_output):
         x = self.linear(decoded_output)
         output_probabilities = self.softmax(x)
-        LOGGER.info("output probabilities size={}".format(output_probabilities.size()))
+        # LOGGER.info("output probabilities size={}".format(output_probabilities.size()))
         
         return output_probabilities
-        
+
+    # def translate(self,input, max_len=50, start_symbol=2): #start_symbol 2 means <s>
+    #     encoded_input = self.encode(input)
+    #     print("encoded_input.size()=",encoded_input.size())
+    #     ys = torch.ones(1,50).fill_(start_symbol).long().cuda()
+    #     print("ys.size()=",ys.size())
+    #     for i in range(max_len-1):
+    #         decoded_output = self.decode(encoded_input, ys)
+    #         prob = self.prob(decoded_output)
+    #         _, next_word = torch.max(prob, dim =1)
+    #         next_word = next_word.data[0]
+    #         ys = torch.cat([ys[:i], torch.ones(1,max_len-i).fill_(next_word).long().cuda()], dim=1)
+    #     return ys
+            
 def test():
     init_logging()
-    inputs = torch.LongTensor([[1,2,3,4]])   
-    outputs = torch.LongTensor([[1,2,3,4]])    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = TransformerModel(d_model=512, num_heads=8, num_encoders=6, num_decoders=6,seq_len=4, in_vocab_size=20, out_vocab_size=20)
+    inputs = torch.LongTensor([[1,2,3,4]]).cuda()   
+    outputs = torch.LongTensor([[1,2,3,4]]).cuda()    
+
+    model = TransformerModel(d_model=512, num_heads=1, num_encoders=1, num_decoders=1,seq_len=4, in_vocab_size=20, out_vocab_size=20).to(device)
     output_probabilities = model(inputs,outputs)
 
 if __name__ == "__main__":
