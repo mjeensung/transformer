@@ -29,7 +29,8 @@ de_tokenizer = WordpieceTokenizer('de').load_model()
 en_tokenizer = WordpieceTokenizer('en').load_model()
     
 # Load dataset
-train_dataset = TedDataset(input_tokenizer=de_tokenizer,output_tokenizer=en_tokenizer,max_seq_len=args.max_seq_len)
+train_dataset = TedDataset(input_tokenizer=de_tokenizer,output_tokenizer=en_tokenizer,max_seq_len=args.max_seq_len,type="train")
+val_dataset = TedDataset(input_tokenizer=de_tokenizer,output_tokenizer=en_tokenizer,max_seq_len=args.max_seq_len,type="val")
 
 # train_size = int(0.8 * len(dataset))
 # val_size = len(dataset) - train_size
@@ -39,10 +40,10 @@ train_loader = DataLoader(dataset=train_dataset,
                             batch_size=args.batch,
                             shuffle=True,
                             collate_fn=train_dataset.collate_fn)
-# val_loader = DataLoader(dataset=val_dataset,
-#                             batch_size=args.batch,
-#                             shuffle=True,
-#                             collate_fn=dataset.collate_fn)
+val_loader = DataLoader(dataset=val_dataset,
+                            batch_size=args.batch,
+                            shuffle=True,
+                            collate_fn=val_dataset.collate_fn)
 
 model = TransformerModel(d_model=512, 
                         num_heads=8, 
@@ -64,15 +65,9 @@ for epoch in range(args.epoch):
     for i, data in tqdm(enumerate(train_loader),total=len(train_loader)):
         inputs, outputs = data
         targets = outputs
-        bos_tokens = torch.ones(args.batch,1).long().cuda()*2 # 2 means sos token
-        # print(bos_tokens.size())
-        # print(bos_tokens)
+        bos_tokens = torch.ones(outputs.size()[0],1).long().cuda()*2 # 2 means sos token
         outputs = torch.cat((bos_tokens,outputs),dim=-1) # insert bos token in front
-        # print(outputs.size())
-        # print(outputs)
         outputs = outputs[:,:-1]
-        # print(outputs.size())
-        # print(outputs)
         output_probabilities = model(inputs,outputs)
         loss = criterion(output_probabilities.view(-1,len(en_tokenizer)), targets.view(-1))
         optimizer.zero_grad()
@@ -88,18 +83,22 @@ for epoch in range(args.epoch):
     print("train!outputs=",outputs.tolist())
     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist())
     # val
-    # model.eval()
-    # with torch.no_grad():
-    #     for i, data in tqdm(enumerate(val_loader),total=len(val_loader)):
-    #         inputs, outputs = data
-    #         output_probabilities = model(inputs,outputs)
-    #         loss = criterion(output_probabilities.view(-1,len(en_tokenizer)), outputs.view(-1))
-    #         val_loss += loss.item()*len(outputs)
-    #         val_total += len(outputs)
-    #         # break
-    #     val_loss /= val_total
-    #     print("val!outputs=",en_tokenizer.decode(outputs.tolist()))
-    #     print("val!predict=",en_tokenizer.decode(torch.argmax(output_probabilities,dim=-1).tolist()))
+    model.eval()
+    with torch.no_grad():
+        for i, data in tqdm(enumerate(val_loader),total=len(val_loader)):
+            inputs, outputs = data
+            targets = outputs
+            bos_tokens = torch.ones(outputs.size()[0],1).long().cuda()*2 # 2 means sos token
+            outputs = torch.cat((bos_tokens,outputs),dim=-1) # insert bos token in front
+            outputs = outputs[:,:-1]
+            output_probabilities = model(inputs,outputs)
+            loss = criterion(output_probabilities.view(-1,len(en_tokenizer)), targets.view(-1))
+            val_loss += loss.item()*len(outputs)
+            val_total += len(outputs)
+            # break
+        val_loss /= val_total
+        print("val!outputs=",en_tokenizer.decode(outputs.tolist()))
+        print("val!predict=",en_tokenizer.decode(torch.argmax(output_probabilities,dim=-1).tolist()))
     # result
     torch.save(model.state_dict(), "outputs/model-epoch{}.pt".format(epoch+1))
     print("Epoch {}/{}, Train_Loss: {:.3f}, Val_Loss: {:.3f}".format(epoch+1,args.epoch, train_loss, val_loss))

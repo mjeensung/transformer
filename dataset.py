@@ -6,10 +6,10 @@ import logging
 LOGGER = logging.getLogger()
 
 class TedDataset(Dataset):
-    def __init__(self,input_tokenizer,output_tokenizer,max_seq_len):
-        with open('./dataset/de-en/train.de',encoding='utf-8') as f:
+    def __init__(self,input_tokenizer,output_tokenizer,max_seq_len,type):
+        with open('./dataset/de-en/{}.de'.format(type),encoding='utf-8') as f:
             de = f.readlines()
-        with open('./dataset/de-en/train.en',encoding='utf-8') as f:
+        with open('./dataset/de-en/{}.en'.format(type),encoding='utf-8') as f:
             en = f.readlines()
         assert(len(en)==len(de))
         self.len = len(en)
