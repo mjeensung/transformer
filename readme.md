@@ -7,6 +7,12 @@ $ conda env create -f env.yml
 $ conda activate transformer
 ```
 
+## Fit tokenizer
+- It fits wordpiece tokenizer with 5000 subwords.
+```
+$ python tokenizer.py
+```
+
 ## Train model
 ```
 $ python main.py
