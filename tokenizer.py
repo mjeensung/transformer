@@ -9,11 +9,14 @@ class WordpieceTokenizer(object):
         self.vocab_size = 5000
         self.prefix = "./dataset/"+prefix
         
-    def transform(self,sentence):
+    def transform(self,sentence, max_length=0):
         x = self.sp.EncodeAsPieces(sentence)
         # LOGGER.info(x)
         x = self.sp.EncodeAsIds(sentence)
-        
+        if max_length>0:
+            pad = [0]*max_length
+            pad[:min(len(x),max_length)] = x[:min(len(x),max_length)]
+            x = pad
         return x
     
     def fit(self,input_file):
