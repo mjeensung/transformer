@@ -46,16 +46,16 @@ def test():
     Generate tokenizer
     """
     en_tokenizer = WordpieceTokenizer('en')
-    # en_tokenizer.fit("./dataset/de-en/train.en")
-    # de_tokenizer = WordpieceTokenizer('de')
-    # de_tokenizer.fit("./dataset/de-en/train.de")
+    en_tokenizer.fit("./dataset/de-en/train.en")
+    de_tokenizer = WordpieceTokenizer('de')
+    de_tokenizer.fit("./dataset/de-en/train.de")
     
-    en_tokenizer.load_model()
+    # en_tokenizer.load_model()
 
-    a = en_tokenizer.transform("But it does not need to have to be that way.")
-    print("a=",a)
+    # a = en_tokenizer.transform("But it does not need to have to be that way.")
+    # print("a=",a)
 
-    a = en_tokenizer.decode([a])
-    print("a=",a)
+    # a = en_tokenizer.decode([a])
+    # print("a=",a)
 if __name__ == "__main__":
     test()
