@@ -6,23 +6,26 @@ import logging
 LOGGER = logging.getLogger()
 
 class TedDataset(Dataset):
-    def __init__(self,input_tokenizer,output_tokenizer,max_seq_len,type):
-        with open('./dataset/de-en/{}.de'.format(type),encoding='utf-8') as f:
-            de = f.readlines()
-        with open('./dataset/de-en/{}.en'.format(type),encoding='utf-8') as f:
-            en = f.readlines()
-        assert(len(en)==len(de))
-        self.len = len(en)
-        self.input = de
-        self.output = en
-        self.input_tokenizer = input_tokenizer
-        self.output_tokenizer = output_tokenizer
+    def __init__(self, type, srctokenizer, trgtokenizer, max_seq_len, datapath, langpair):
+        srclang = langpair.split("-")[0]
+        trglang = langpair.split("-")[1]
+        
+        with open('./dataset/{}/{}.{}.{}'.format(datapath, type, langpair, srclang),encoding='utf-8') as f:
+            src = f.readlines()
+        with open('./dataset/{}/{}.{}.{}'.format(datapath, type, langpair, trglang),encoding='utf-8') as f:
+            trg = f.readlines()
+        assert(len(src)==len(trg))
+        self.len = len(src)
+        self.input = src
+        self.output = trg
+        self.srctokenizer = srctokenizer
+        self.trgtokenizer = trgtokenizer
         self.max_seq_len = max_seq_len
     
     def __getitem__(self,index):
         input = self.input[index]
         output = self.output[index]
-        return torch.tensor(self.input_tokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.output_tokenizer.transform(output), dtype=torch.float64, requires_grad=True)
+        return torch.tensor(self.srctokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.trgtokenizer.transform(output), dtype=torch.float64, requires_grad=True)
     
     def __len__(self):
         return self.len
@@ -75,23 +78,25 @@ def init_logging():
             
 def test():
     init_logging()
-    en_tokenizer = WordpieceTokenizer('en').load_model()
-    de_tokenizer = WordpieceTokenizer('de').load_model()
-    
+    srctokenizer = WordpieceTokenizer('iwslt17','fr-en',l=64, alpha=0.1).load_model()
+    trgtokenizer = WordpieceTokenizer('iwslt17','fr-en').load_model()
+
     # en_tokenizer.load_model()
-    dataset = TedDataset(en_tokenizer=en_tokenizer, de_tokenizer=de_tokenizer, max_seq_len=50)
+    dataset = TedDataset(type='valid', srctokenizer=srctokenizer, trgtokenizer=trgtokenizer, 
+                         max_seq_len=10, datapath='iwslt17',langpair='fr-en')
     train_loader = DataLoader(dataset=dataset,
-                              batch_size=3,
+                              batch_size=1,
                               shuffle=False,
                               collate_fn=dataset.collate_fn)
-    for i, data in enumerate(train_loader):
-        inputs, outputs = data
-        print("inputs.size()=",outputs.size())
-        LOGGER.info("inputs.size()=".format(inputs.size()))
-        LOGGER.info(inputs)
-        print("outputs.size()=",outputs.size())
-        LOGGER.info("outputs.size()=".format(outputs.size()))
-        LOGGER.info(outputs)
-        break
+    for epoch in range(10):
+        for i, data in enumerate(train_loader):
+            inputs, outputs = data
+            print("inputs.size()=",outputs.size())
+            LOGGER.info("inputs.size()=".format(inputs.size()))
+            LOGGER.info(inputs)
+            print("outputs.size()=",outputs.size())
+            LOGGER.info("outputs.size()=".format(outputs.size()))
+            LOGGER.info(outputs)
+            break
 if __name__ == "__main__":
     test()

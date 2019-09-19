@@ -4,29 +4,37 @@ import logging
 LOGGER = logging.getLogger()
 
 class WordpieceTokenizer(object):
-    def __init__(self,prefix):
+    def __init__(self, datapath, langpair, l=0, alpha=0, n=0):
         self.templates = '--input={} --model_prefix={} --vocab_size={} --bos_id=2 --eos_id=3 --pad_id=0 --unk_id=1'
-        self.vocab_size = 5000
-        self.prefix = "./dataset/"+prefix
+        self.vocab_size = 16000
+        self.langpair = "./dataset/{}/{}".format(datapath, langpair)
+        # for subword regualarization
+        self.l = l
+        self.alpha = alpha
+        self.n = n
+
         
     def transform(self,sentence, max_length=0):
-        x = self.sp.EncodeAsPieces(sentence)
-        # LOGGER.info(x)
-        x = self.sp.EncodeAsIds(sentence)
+        if self.l and self.alpha:
+            x = self.sp.SampleEncodeAsIds(sentence, self.l, self.alpha)
+        elif self.n:
+            x = self.sp.NBestEncodeAsIds(sentence, self.n)
+        else:
+            x = self.sp.EncodeAsIds(sentence)
         if max_length>0:
             pad = [0]*max_length
             pad[:min(len(x),max_length)] = x[:min(len(x),max_length)]
             x = pad
         return x
     
-    def fit(self,input_file):
-        cmd = self.templates.format(input_file, self.prefix, self.vocab_size, 0)
+    def fit(self, input_file):
+        cmd = self.templates.format(input_file, self.langpair, self.vocab_size, 0)
         spm.SentencePieceTrainer.Train(cmd)
         
     def load_model(self):
-        file = self.prefix+".model"
+        file = self.langpair+".model"
         self.sp = spm.SentencePieceProcessor()
-        self.sp.Load(self.prefix+".model")
+        self.sp.Load(self.langpair+".model")
         self.sp.SetEncodeExtraOptions('eos')
         print("load_model {}".format(file))
         return self
@@ -45,17 +53,8 @@ def test():
     """
     Generate tokenizer
     """
-    en_tokenizer = WordpieceTokenizer('en')
-    en_tokenizer.fit("./dataset/de-en/train.en")
-    de_tokenizer = WordpieceTokenizer('de')
-    de_tokenizer.fit("./dataset/de-en/train.de")
+    tokenizer = WordpieceTokenizer('iwslt17','fr-en')
+    tokenizer.fit("./dataset/iwslt17/train.fr-en.en,./dataset/iwslt17/train.fr-en.fr")
     
-    # en_tokenizer.load_model()
-
-    # a = en_tokenizer.transform("But it does not need to have to be that way.")
-    # print("a=",a)
-
-    # a = en_tokenizer.decode([a])
-    # print("a=",a)
 if __name__ == "__main__":
     test()
