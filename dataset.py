@@ -6,26 +6,25 @@ import logging
 LOGGER = logging.getLogger()
 
 class TedDataset(Dataset):
-    def __init__(self, type, srctokenizer, trgtokenizer, max_seq_len, datapath, langpair):
+    def __init__(self, tokenizer, max_seq_len, datapath, langpair, type='train'):
         srclang = langpair.split("-")[0]
         trglang = langpair.split("-")[1]
         
-        with open('./dataset/{}/{}.{}.{}'.format(datapath, type, langpair, srclang),encoding='utf-8') as f:
+        with open('{}/{}.{}.{}'.format(datapath, type, langpair, srclang),encoding='utf-8') as f:
             src = f.readlines()
-        with open('./dataset/{}/{}.{}.{}'.format(datapath, type, langpair, trglang),encoding='utf-8') as f:
+        with open('{}/{}.{}.{}'.format(datapath, type, langpair, trglang),encoding='utf-8') as f:
             trg = f.readlines()
         assert(len(src)==len(trg))
         self.len = len(src)
         self.input = src
         self.output = trg
-        self.srctokenizer = srctokenizer
-        self.trgtokenizer = trgtokenizer
+        self.tokenizer = tokenizer
         self.max_seq_len = max_seq_len
     
     def __getitem__(self,index):
         input = self.input[index]
         output = self.output[index]
-        return torch.tensor(self.srctokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.trgtokenizer.transform(output), dtype=torch.float64, requires_grad=True)
+        return torch.tensor(self.tokenizer.transform(input), dtype=torch.float64, requires_grad=True), torch.tensor(self.tokenizer.transform(output), dtype=torch.float64, requires_grad=True)
     
     def __len__(self):
         return self.len
@@ -78,12 +77,12 @@ def init_logging():
             
 def test():
     init_logging()
-    srctokenizer = WordpieceTokenizer('iwslt17','fr-en',l=64, alpha=0.1).load_model()
-    trgtokenizer = WordpieceTokenizer('iwslt17','fr-en').load_model()
+    datapath = './datasets/iwslt17.fr.en'
+    tokenizer = WordpieceTokenizer(datapath).load_model()
 
     # en_tokenizer.load_model()
-    dataset = TedDataset(type='valid', srctokenizer=srctokenizer, trgtokenizer=trgtokenizer, 
-                         max_seq_len=10, datapath='iwslt17',langpair='fr-en')
+    dataset = TedDataset(type='valid', tokenizer=tokenizer, 
+                         max_seq_len=10, datapath=datapath, langpair='fr-en')
     train_loader = DataLoader(dataset=dataset,
                               batch_size=1,
                               shuffle=False,

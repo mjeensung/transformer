@@ -1,5 +1,9 @@
-*.model
-*.vocab
+# *.model
+# *.vocab
 __pycache__
 .ipynb_checkpoints
-*.pt
+# *.pt
+outputs
+datasets
+*.in
+*.out

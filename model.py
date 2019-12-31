@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import math
 import numpy as np
 import logging
+import pdb
 
 LOGGER = logging.getLogger()
 
@@ -205,11 +206,8 @@ class TransformerModel(nn.Module):
         self.num_decoders = num_decoders
         self.in_vocab_size = in_vocab_size
         self.out_vocab_size = out_vocab_size
-
         self.in_word_embed = WordEmbedding(vocab_size=self.in_vocab_size)
         self.out_word_embed = WordEmbedding(vocab_size=self.out_vocab_size)
-        # self.encoders = nn.ModuleList([Encoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
-        # self.decoders = nn.ModuleList([Decoder(seq_len =self.seq_len, d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
         self.encoders = nn.ModuleList([Encoder(d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_encoders)])
         self.decoders = nn.ModuleList([Decoder(d_model=self.d_model , num_heads=self.num_heads) for i in range(self.num_decoders)])
 
@@ -253,19 +251,6 @@ class TransformerModel(nn.Module):
         # LOGGER.info("output probabilities size={}".format(output_probabilities.size()))
         
         return output_probabilities
-
-    # def translate(self,input, max_len=50, start_symbol=2): #start_symbol 2 means <s>
-    #     encoded_input = self.encode(input)
-    #     print("encoded_input.size()=",encoded_input.size())
-    #     ys = torch.ones(1,50).fill_(start_symbol).long().cuda()
-    #     print("ys.size()=",ys.size())
-    #     for i in range(max_len-1):
-    #         decoded_output = self.decode(encoded_input, ys)
-    #         prob = self.prob(decoded_output)
-    #         _, next_word = torch.max(prob, dim =1)
-    #         next_word = next_word.data[0]
-    #         ys = torch.cat([ys[:i], torch.ones(1,max_len-i).fill_(next_word).long().cuda()], dim=1)
-    #     return ys
             
 def test():
     init_logging()

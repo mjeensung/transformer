@@ -26,27 +26,30 @@ def get_args():
     parser.add_argument('--learning_rate', 
                         default=0.0001, type=float)
     parser.add_argument('--epoch', 
-                        default=200, type=int)
+                        default=100, type=int)
     parser.add_argument('--batch', 
                         default=64, type=int)
     parser.add_argument('--seed', 
                         default=0, type=int)                    
     parser.add_argument('--datapath', 
-                        default='iwslt17')
+                        default='./datasets/iwslt17.fr.en')
     parser.add_argument('--langpair', 
                         default='fr-en')
     parser.add_argument('--model_name', 
                         default='model')
     parser.add_argument('--mode', 
                         default='train')
-    
-                                            
+                        
     # tokenization
     parser.add_argument('--l', 
                         default=0, type=int)
     parser.add_argument('--alpha', 
                         default=0, type=float)
     
+    # evaluation
+    parser.add_argument('--eval_input')
+    parser.add_argument('--eval_output')
+
     args = parser.parse_args()
 
     logger.info(f"device: {device}, n_gpu: {n_gpu}")
@@ -61,14 +64,12 @@ def get_args():
 def main(args):
     if args.mode == 'train':
         # Load tokenizer
-        srctokenizer = WordpieceTokenizer(args.datapath,args.langpair,args.l, args.alpha).load_model()
-        trgtokenizer = WordpieceTokenizer(args.datapath,args.langpair).load_model()
-    
+        tokenizer = WordpieceTokenizer(args.datapath).load_model()
         # Load dataset
-        train_dataset = TedDataset(type="train",srctokenizer=srctokenizer,trgtokenizer=trgtokenizer,
+        train_dataset = TedDataset(type="train",tokenizer=tokenizer,
                                     max_seq_len=args.max_seq_len,datapath=args.datapath,langpair=args.langpair)
-        val_dataset = TedDataset(type="valid",srctokenizer=srctokenizer,trgtokenizer=trgtokenizer,
-                                    max_seq_len=args.max_seq_len,datapath=args.datapath,langpair=args.langpair)
+        val_dataset = TedDataset(type="valid",tokenizer=tokenizer,
+                                 max_seq_len=args.max_seq_len,datapath=args.datapath,langpair=args.langpair)
 
         train_loader = DataLoader(dataset=train_dataset,
                                     batch_size=args.batch,
@@ -78,14 +79,13 @@ def main(args):
                                     batch_size=args.batch,
                                     shuffle=False,
                                     collate_fn=val_dataset.collate_fn)
-
         model = TransformerModel(d_model=512, 
                                 num_heads=8, 
                                 num_encoders=6, 
                                 num_decoders=6,
                                 # seq_len=args.max_seq_len, 
-                                in_vocab_size=len(srctokenizer), 
-                                out_vocab_size=len(trgtokenizer)).to(device)
+                                in_vocab_size=len(tokenizer), 
+                                out_vocab_size=len(tokenizer)).to(device)
         criterion = nn.NLLLoss(ignore_index=0)
         optimizer = optim.Adam(model.parameters(), lr=args.learning_rate,betas=(0.9, 0.98), eps=1e-09)
 
@@ -105,19 +105,20 @@ def main(args):
                 outputs = torch.cat((bos_tokens,outputs),dim=-1) # insert bos token in front
                 outputs = outputs[:,:-1]
                 output_probabilities = model(inputs,outputs)
-                loss = criterion(output_probabilities.view(-1,len(trgtokenizer)), targets.view(-1))
+                loss = criterion(output_probabilities.view(-1,len(tokenizer)), targets.view(-1))
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 train_loss += loss.item()
                 train_total += 1
-                # if i % 10 == 0:
-                #     print("train!outputs=",targets.tolist()[0])
-                #     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist()[0])
+                if i + 1 % 10 == 0:
+                    print("train!outputs=",targets.tolist()[0])
+                    print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist()[0])
                 # break
             train_loss /= train_total
-            # print("train!outputs=",outputs.tolist())
-            # print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist())
+            print("train!outputs=",outputs.tolist()[0])
+            print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist()[0])
+            
             # val
             model.eval()
             with torch.no_grad():
@@ -128,43 +129,41 @@ def main(args):
                     outputs = torch.cat((bos_tokens,outputs),dim=-1) # insert bos token in front
                     outputs = outputs[:,:-1]
                     output_probabilities = model(inputs,outputs)
-                    loss = criterion(output_probabilities.view(-1,len(trgtokenizer)), targets.view(-1))
+                    loss = criterion(output_probabilities.view(-1,len(tokenizer)), targets.view(-1))
                     val_loss += loss.item()*len(outputs)
                     val_total += len(outputs)
                     # break
                 val_loss /= val_total
-                print("val!outputs=",trgtokenizer.decode(outputs.tolist()))
-                print("val!predict=",trgtokenizer.decode(torch.argmax(output_probabilities,dim=-1).tolist()))
+                print("val!outputs=",tokenizer.decode(outputs.tolist())[0])
+                print("val!predict=",tokenizer.decode(torch.argmax(output_probabilities,dim=-1).tolist())[0])
+            
             # result
             print("Epoch {}/{}, Train_Loss: {:.3f}, Val_Loss: {:.3f}".format(epoch+1,args.epoch, train_loss, val_loss))
             if best_loss > val_loss:
-                print("model saved!")
                 best_loss = val_loss
                 torch.save(model.state_dict(), "outputs/{}.pt".format(args.model_name))
+                print("model saved!")
                 cnt = 0 
             else:
                 cnt += 1
 
-            if cnt>3:
-                break
     elif args.mode == 'test':
         # Load tokenizer
-        srctokenizer = WordpieceTokenizer(args.datapath,args.langpair).load_model()
-        trgtokenizer = WordpieceTokenizer(args.datapath,args.langpair).load_model()
+        tokenizer = WordpieceTokenizer(args.datapath).load_model()
     
         model = TransformerModel(d_model=512, 
                                 num_heads=8, 
                                 num_encoders=6, 
                                 num_decoders=6,
-                                in_vocab_size=len(srctokenizer), 
-                                out_vocab_size=len(trgtokenizer)).to(device)
+                                in_vocab_size=len(tokenizer), 
+                                out_vocab_size=len(tokenizer)).to(device)
 
         model.load_state_dict(torch.load("./outputs/{}.pt".format(args.model_name)))
         model.eval()
 
         def translate(inputs):
             input_len = len(inputs)
-            inputs = torch.tensor([srctokenizer.transform(input,max_length=50) for input in inputs]).cuda()
+            inputs = torch.tensor([tokenizer.transform(input,max_length=50) for input in inputs]).cuda()
             outputs = torch.tensor([[2]]*input_len).cuda() #2 means sos token
             for i in range(50):
                 prediction = model(inputs,outputs)
@@ -182,10 +181,9 @@ def main(args):
                     # print("no eos token found")
                 cleanoutput.append(i)
             outputs = cleanoutput
-            return trgtokenizer.decode(outputs)
+            return tokenizer.decode(outputs)
 
-
-        with open('./iwslt17-fr-en.src',mode='r',encoding='utf-8') as f:
+        with open(args.eval_input,mode='r',encoding='utf-8') as f:
             inputs = f.readlines()
         outputs = []        
 
@@ -193,7 +191,7 @@ def main(args):
         for minibatch in tqdm([inputs[i:i + batch_size] for i in range(0, len(inputs), batch_size)]):
             outputs += translate(minibatch)
 
-        with open('./output.detok.txt'.format(args.model_name),mode='w',encoding='utf-8') as f:
+        with open(args.eval_output.format(args.model_name),mode='w',encoding='utf-8') as f:
             f.write('\n'.join(outputs) + '\n')
 
 if __name__ == "__main__":

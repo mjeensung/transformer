@@ -1,35 +1,45 @@
 # Transformer
 Re-implementation of Attention Is All You Need (NIPS 2017)
 
-## Create Conda Environment
+## Requirements
+- python=3.6.0
+- pytorch=0.4.1
+- sencencepiece=0.1.82
+
+## Download datasets
+Use IWSLT17 fr-en. The following script downloads datasets and preprocess them.
 ```
-$ conda env create -f env.yml
-$ conda activate transformer
+$ download.sh
 ```
 
-## Fit tokenizer
-- It fits wordpiece tokenizer with 16000 subwords.
+## Sentence Piece Model
+Use [SentencePiece](https://github.com/google/sentencepiece) tokenizer for subword-level segmentation in sentences.
 ```
-$ python tokenizer.py
+$ python tokenizer.py --vocab_size 16000
 ```
 
 ## Train model
 ```
-$ python main.py --mode train --model_name [model_name]
+$ MODEL_NAME="model"
+$ python main.py --mode train \
+                 --datapath './datasets/iwslt17.fr.en'\
+                 --langpair 'fr-en'\
+                 --epoch 100\
+                 --learning_rate 0.0001\
+                 --max_seq_len 50\
+                 --model_name ${MODEL_NAME}
 ```
 
-## Calculate BLEU score
-- Download iwslt17 fr-en
+## Evaluate
+Use [SacreBLEU](https://github.com/mjpost/sacreBLEU) to evaluate the model based on BLEU score.
 ```
-$ sacrebleu -t iwslt17 -l fr-en --echo src > ./iwslt17-fr-en.src
-```
-
-- Translate evaluation set
-```
-$ python main.py --mode test --model_name [model_name]
-```
-
-- Score the decoder
-```
-$ cat output.detok.txt | sacrebleu -t iwslt17 -l fr-en
+MODEL_NAME="model"
+INPUT_NAME="./iwslt17-fr-en.in"
+OUTPUT_NAME="./iwslt17-fr-en.out"
+$ sacrebleu -t iwslt17 -l fr-en --echo src > ${INPUT_NAME}
+$ python main.py --mode test \
+                 --model_name ${MODEL_NAME} \
+                 --eval_input ${INPUT_NAME} \
+                 --eval_output ${OUTPUT_NAME}
+$ cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
 ```
