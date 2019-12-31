@@ -115,11 +115,11 @@ def main(args):
                 optimizer.step()
                 train_loss += loss.item()
                 train_total += 1
-                if (i + 1) % 10 == 0:
-                    summary.add_scalar('loss/loss_train', loss.item(), i*(epoch+1)) # tensorboard 
+                if (train_global_step + 1) % 10 == 0:
+                    summary.add_scalar('loss/loss_train', loss.item(), train_global_step) # tensorboard 
                     print("train!outputs=",targets.tolist()[0])
                     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist()[0])
-                # train_global_step += 1
+                train_global_step += 1
                 # break
             train_loss /= train_total
             print("train!outputs=",outputs.tolist()[0])
@@ -138,9 +138,9 @@ def main(args):
                     loss = criterion(output_probabilities.view(-1,len(tokenizer)), targets.view(-1))
                     val_loss += loss.item()*len(outputs)
                     val_total += len(outputs)
-                    if (i + 1) % 10 == 0:
-                        summary.add_scalar('loss/loss_val', loss.item(), i*(epoch+1)) # tensorboard 
-                    # val_global_step +=1
+                    if (val_global_step + 1) % 10 == 0:
+                        summary.add_scalar('loss/loss_val', loss.item(), val_global_step) # tensorboard 
+                    val_global_step +=1
                     # break
                 val_loss /= val_total
                 print("val!outputs=",tokenizer.decode(outputs.tolist())[0])
