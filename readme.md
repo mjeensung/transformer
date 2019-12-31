@@ -5,6 +5,7 @@ Re-implementation of Attention Is All You Need (NIPS 2017)
 - python=3.6.0
 - pytorch=0.4.1
 - sencencepiece=0.1.82
+- tensorboardX
 
 ## Download datasets
 Use IWSLT17 fr-en. The following script downloads datasets and preprocess them.
@@ -36,10 +37,11 @@ Use [SacreBLEU](https://github.com/mjpost/sacreBLEU) to evaluate the model based
 MODEL_NAME="model"
 INPUT_NAME="./iwslt17-fr-en.in"
 OUTPUT_NAME="./iwslt17-fr-en.out"
-$ sacrebleu -t iwslt17 -l fr-en --echo src > ${INPUT_NAME}
-$ python main.py --mode test \
-                 --model_name ${MODEL_NAME} \
-                 --eval_input ${INPUT_NAME} \
-                 --eval_output ${OUTPUT_NAME}
-$ cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
+sacrebleu -t iwslt17 -l fr-en --echo src > ${INPUT_NAME}
+python main.py --mode test \
+    --model_name ${MODEL_NAME} \
+    --eval_input ${INPUT_NAME} \
+    --eval_output ${OUTPUT_NAME}
+cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
 ```
+

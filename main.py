@@ -11,6 +11,8 @@ import pdb
 import logging
 import random
 import numpy as np
+from tensorboardX import SummaryWriter
+summary = SummaryWriter()
 
 logging.basicConfig(format='%(asctime)s -  %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -91,6 +93,8 @@ def main(args):
 
         best_loss = float("inf")
         cnt = 0
+        train_global_step = 0
+        val_global_step = 0
         for epoch in range(args.epoch):
             train_loss = 0
             val_loss = 0
@@ -99,6 +103,7 @@ def main(args):
             # train
             model.train()
             for i, data in tqdm(enumerate(train_loader),total=len(train_loader)):
+                train_global_step += 1
                 inputs, outputs = data
                 targets = outputs
                 bos_tokens = torch.ones(outputs.size()[0],1).long().cuda()*2 # 2 means sos token
@@ -111,7 +116,8 @@ def main(args):
                 optimizer.step()
                 train_loss += loss.item()
                 train_total += 1
-                if i + 1 % 10 == 0:
+                if (train_global_step + 1) % 10 == 0:
+                    summary.add_scalar('loss/loss_train', loss.item(), train_global_step) # tensorboard 
                     print("train!outputs=",targets.tolist()[0])
                     print("train!predict=",torch.argmax(output_probabilities,dim=-1).tolist()[0])
                 # break
@@ -123,6 +129,7 @@ def main(args):
             model.eval()
             with torch.no_grad():
                 for i, data in tqdm(enumerate(val_loader),total=len(val_loader)):
+                    val_global_step +=1
                     inputs, outputs = data
                     targets = outputs
                     bos_tokens = torch.ones(outputs.size()[0],1).long().cuda()*2 # 2 means sos token
@@ -132,6 +139,8 @@ def main(args):
                     loss = criterion(output_probabilities.view(-1,len(tokenizer)), targets.view(-1))
                     val_loss += loss.item()*len(outputs)
                     val_total += len(outputs)
+                    if (val_global_step + 1) % 10 == 0:
+                        summary.add_scalar('loss/loss_val', loss.item(), val_global_step) # tensorboard 
                     # break
                 val_loss /= val_total
                 print("val!outputs=",tokenizer.decode(outputs.tolist())[0])
@@ -163,6 +172,7 @@ def main(args):
 
         def translate(inputs):
             input_len = len(inputs)
+            pdb.set_trace()
             inputs = torch.tensor([tokenizer.transform(input,max_length=50) for input in inputs]).cuda()
             outputs = torch.tensor([[2]]*input_len).cuda() #2 means sos token
             for i in range(50):
@@ -177,10 +187,9 @@ def main(args):
                     i = i[:eos_idx]
                 except:
                     pass
-                    # print("len(i)=",len(i))
-                    # print("no eos token found")
                 cleanoutput.append(i)
             outputs = cleanoutput
+            pdb.set_trace()
             return tokenizer.decode(outputs)
 
         with open(args.eval_input,mode='r',encoding='utf-8') as f:
@@ -190,6 +199,7 @@ def main(args):
         batch_size = 32
         for minibatch in tqdm([inputs[i:i + batch_size] for i in range(0, len(inputs), batch_size)]):
             outputs += translate(minibatch)
+            break
 
         with open(args.eval_output.format(args.model_name),mode='w',encoding='utf-8') as f:
             f.write('\n'.join(outputs) + '\n')
