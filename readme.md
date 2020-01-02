@@ -14,7 +14,7 @@ $ download.sh
 ```
 
 ## Sentence Piece Model
-Use [SentencePiece](https://github.com/google/sentencepiece) tokenizer for subword-level segmentation in sentences.
+Train [SentencePiece](https://github.com/google/sentencepiece) tokenizer for subword-level segmentation in sentences.
 ```
 $ python tokenizer.py --vocab_size 16000
 ```
@@ -51,3 +51,8 @@ cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
 | checkout                                 | dataset       | decoding | BLEU |
 |------------------------------------------|---------------|----------|------|
 | 135bdabaabae068eb1319094ac4817ea4f72c934 | iwslt17 fr-en | greedy   | 30.7 |
+
+## TODO
+
+- [ ] Implement beam search
+- [ ] Evaluate the model on various testsets (eg. en->fr, de<->en)
