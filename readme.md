@@ -48,4 +48,6 @@ python main.py --mode test \
 cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
 ```
 
-
+| checkout                                 | dataset       | decoding | BLEU |
+|------------------------------------------|---------------|----------|------|
+| 135bdabaabae068eb1319094ac4817ea4f72c934 | iwslt17 fr-en | greedy   | 30.7 |
