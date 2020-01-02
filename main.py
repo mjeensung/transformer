@@ -172,7 +172,6 @@ def main(args):
 
         def translate(inputs):
             input_len = len(inputs)
-            pdb.set_trace()
             inputs = torch.tensor([tokenizer.transform(input,max_length=50) for input in inputs]).cuda()
             outputs = torch.tensor([[2]]*input_len).cuda() #2 means sos token
             for i in range(50):
@@ -189,7 +188,6 @@ def main(args):
                     pass
                 cleanoutput.append(i)
             outputs = cleanoutput
-            pdb.set_trace()
             return tokenizer.decode(outputs)
 
         with open(args.eval_input,mode='r',encoding='utf-8') as f:
@@ -199,7 +197,6 @@ def main(args):
         batch_size = 32
         for minibatch in tqdm([inputs[i:i + batch_size] for i in range(0, len(inputs), batch_size)]):
             outputs += translate(minibatch)
-            break
 
         with open(args.eval_output.format(args.model_name),mode='w',encoding='utf-8') as f:
             f.write('\n'.join(outputs) + '\n')

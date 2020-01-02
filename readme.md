@@ -1,5 +1,5 @@
 # Transformer
-Re-implementation of Attention Is All You Need (NIPS 2017)
+Re-implementation of [Attention Is All You Need](https://arxiv.org/abs/1706.03762) (NIPS 2017)
 
 ## Requirements
 - python=3.6.0
@@ -31,6 +31,9 @@ $ python main.py --mode train \
                  --model_name ${MODEL_NAME}
 ```
 
+Plot train_loss and val_loss via TensorboardX.
+![Alt text](./images/result_20200102.jpg)
+
 ## Evaluate
 Use [SacreBLEU](https://github.com/mjpost/sacreBLEU) to evaluate the model based on BLEU score.
 ```
@@ -44,4 +47,5 @@ python main.py --mode test \
     --eval_output ${OUTPUT_NAME}
 cat ${OUTPUT_NAME} | sacrebleu -t iwslt17 -l fr-en
 ```
+
 
